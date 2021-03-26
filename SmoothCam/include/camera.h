@@ -1,4 +1,6 @@
 #pragma once
+#include "skee64/NiTransformInterface.h"
+
 #include "camera_state.h"
 #include "camera_states/thirdperson.h"
 #include "camera_states/thirdperson_combat.h"

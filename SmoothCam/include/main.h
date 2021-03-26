@@ -1,4 +1,8 @@
 #pragma once
+#include "skse64/PluginManager.h"
+#include "skee64/IPluginInterface.h"
+#include "skee64/NiTransformInterface.h"
+
 #include "camera.h"
 #include "detours.h"
 #include "papyrus.h"

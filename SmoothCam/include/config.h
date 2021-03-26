@@ -17,6 +17,7 @@ namespace Config {
 		SINE_IN, SINE_OUT, SINE_INOUT,
 		CIRC_IN, CIRC_OUT, CIRC_INOUT,
 		EXP_IN, EXP_OUT, EXP_INOUT,
+		FLOATING, CONSTANT,
 	};
 
 	enum class CrosshairType : uint8_t {
@@ -71,6 +72,8 @@ namespace Config {
 		{ "exponentialEaseIn",		ScalarMethods::EXP_IN },
 		{ "exponentialEaseOut",		ScalarMethods::EXP_OUT },
 		{ "exponentialEaseInOut",	ScalarMethods::EXP_INOUT },
+		{ "floating",               ScalarMethods::FLOATING },
+		{ "constant",               ScalarMethods::CONSTANT },
 	});
 
 	constexpr auto scalarMethodRevLookup = mapbox::eternal::map<ScalarMethods, mapbox::eternal::string>({
@@ -96,6 +99,8 @@ namespace Config {
 		{ ScalarMethods::EXP_IN, 		"exponentialEaseIn" },
 		{ ScalarMethods::EXP_OUT, 		"exponentialEaseOut" },
 		{ ScalarMethods::EXP_INOUT, 	"exponentialEaseInOut" },
+		{ ScalarMethods::FLOATING, 		"floating" },
+		{ ScalarMethods::CONSTANT, 		"constant" },
 	});
 
 	constexpr auto crosshairTypeLookup = mapbox::eternal::hash_map<mapbox::eternal::string, CrosshairType>({

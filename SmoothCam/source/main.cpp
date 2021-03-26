@@ -6,6 +6,9 @@ const SKSEPapyrusInterface* g_papyrus = nullptr;
 static bool hooked = false;
 static bool d3dHooked = false;
 
+NiTransformInterface* skee64_nti = nullptr;
+IInterfaceMap* skee64_ifmap = nullptr;
+
 std::shared_ptr<Camera::SmoothCamera> g_theCamera = nullptr;
 #ifdef WITH_D2D
 std::unique_ptr<Render::D2D> g_D2D = nullptr;
@@ -21,6 +24,31 @@ void SKSEMessageHandler(SKSEMessagingInterface::Message* message) {
 			if (!hooked) {
 				g_theCamera = std::make_shared<Camera::SmoothCamera>();
 				hooked = Detours::Attach();
+			}
+			break;
+		}
+		case SKSEMessagingInterface::kMessage_PostPostLoad: {
+			//the corresponding RegisterListener function call from skee64
+			//is currently being called in the SKSEPlugin_Load of skee64
+			//but that should not matter, as the order is
+			// [...] -> SKSEPlugin_load() -> [...?] -> PostLoad -> PostPostLoad
+			//Note: RegisterListener should *normally* happen during PostLoad according to SKSE
+			InterfaceExchangeMessage ifem;
+			bool found_skee64 = g_messaging->Dispatch(
+				g_pluginHandle,
+				InterfaceExchangeMessage::kMessage_ExchangeInterface,
+				&ifem,
+				sizeof(ifem),
+				"skee");
+			if (found_skee64) {
+				_MESSAGE("found skee64!");
+				skee64_ifmap = ifem.interfaceMap;
+				if (skee64_ifmap) {
+					_MESSAGE("found skee64 IInterfaceMap!");
+					skee64_nti = static_cast<NiTransformInterface*>(ifem.interfaceMap->QueryInterface("NiTransform"));
+					if (skee64_nti)
+						_MESSAGE("found skee64 NiTransformInterface!");
+				}
 			}
 			break;
 		}

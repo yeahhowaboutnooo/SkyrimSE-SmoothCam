@@ -89,7 +89,7 @@ glm::vec3 Camera::State::BaseCameraState::ComputeOffsetClamping(const TESObjectR
 	glm::vec3 forward, right, up, coef;
 	mmath::DecomposeToBasis(
 		cameraPosition - cameraWorldTarget,
-		{ ref->rot.x, ref->rot.y, ref->rot.z },
+		{ 0.0f, ref->rot.y, ref->rot.z },
 		forward, right, up, coef
 	);
 

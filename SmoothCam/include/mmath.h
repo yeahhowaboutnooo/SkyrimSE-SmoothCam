@@ -98,6 +98,10 @@ namespace mmath {
 				return glm::exponentialEaseOut(interpValue);
 			case Config::ScalarMethods::EXP_INOUT:
 				return glm::exponentialEaseInOut(interpValue);
+			case Config::ScalarMethods::FLOATING:
+				return 0;
+			case Config::ScalarMethods::CONSTANT:
+				return 1;
 			default:
 				return glm::linearInterpolation(interpValue);
 		}

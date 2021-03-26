@@ -1,6 +1,9 @@
 #include "camera.h"
 #include "crosshair.h"
 
+extern NiTransformInterface* skee64_nti;
+extern IInterfaceMap* skee64_ifmap;
+
 Camera::SmoothCamera::SmoothCamera() : config(Config::GetCurrentConfig()) {
 	cameraStates[static_cast<size_t>(GameState::CameraState::ThirdPerson)] =
 		std::move(std::make_unique<State::ThirdpersonState>(this));
@@ -704,10 +707,22 @@ glm::vec3 Camera::SmoothCamera::GetCurrentCameraTargetWorldPosition(const TESObj
 		}
 
 		if (node) {
+			NiTransform transform;
+			if (skee64_nti) {
+				TESNPC* actorBase = DYNAMIC_CAST((*g_thePlayer)->baseForm, TESForm, TESNPC);
+				if (actorBase) {
+					const int playerSex = CALL_MEMBER_FN(actorBase, GetSex)();
+					const auto state = GameState::GetCameraState(*g_thePlayer, camera);
+					//not sure: maybe for every state except first person?
+					const bool isThirdPerson = (state == GameState::CameraState::ThirdPerson || state == GameState::CameraState::ThirdPersonCombat);
+					skee64_nti->GetOverrideNodeTransform(*g_thePlayer, isThirdPerson, playerSex, "NPC", "internal",
+						OverrideVariant::kParam_NodeTransformPosition, &transform);
+				}
+			}
 			return glm::vec3(
-				ref->pos.x,
-				ref->pos.y,
-				node->m_worldTransform.pos.z
+				ref->pos.x, //consider adding other transforms here
+				ref->pos.y, //but i wouldn't know what uses them (afaik niOverride high heels only uses pos.z)
+				node->m_worldTransform.pos.z + transform.pos.z
 			);
 		}
 	}
