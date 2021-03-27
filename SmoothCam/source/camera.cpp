@@ -715,7 +715,7 @@ glm::vec3 Camera::SmoothCamera::GetCurrentCameraTargetWorldPosition(const TESObj
 					const auto state = GameState::GetCameraState(*g_thePlayer, camera);
 					//not sure: maybe for every state except first person?
 					const bool isThirdPerson = (state == GameState::CameraState::ThirdPerson || state == GameState::CameraState::ThirdPersonCombat);
-					skee64_nti->GetOverrideNodeTransform(*g_thePlayer, isThirdPerson, playerSex, "NPC", "internal",
+					skee64_nti->GetOverrideNodeTransform(*g_thePlayer, !isThirdPerson, playerSex, "NPC", "internal",
 						OverrideVariant::kParam_NodeTransformPosition, &transform);
 				}
 			}
