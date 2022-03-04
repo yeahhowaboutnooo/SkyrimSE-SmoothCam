@@ -205,7 +205,13 @@ bool GameState::IsUsingMagicItem(const RE::Actor* player, bool leftHand) noexcep
 	if (!wep) return false;
 	
 	// Just look for a staff right now, consider anything else to be non-magic
-	return wep->weaponData.animationType == RE::WEAPON_TYPE::kStaff;
+	//return wep->weaponData.animationType == RE::WEAPON_TYPE::kStaff;
+
+	const auto enchItem = wep->formEnchanting;
+	if (!enchItem)
+		return false;
+
+	return IsCombatMagic(enchItem);
 }
 
 bool GameState::IsCombatMagic(const RE::MagicItem* spell) noexcept {
@@ -214,7 +220,8 @@ bool GameState::IsCombatMagic(const RE::MagicItem* spell) noexcept {
 	const auto spellType = spell->GetSpellType();
 	if (spellType != RE::MagicSystem::SpellType::kSpell &&
 		spellType != RE::MagicSystem::SpellType::kLeveledSpell &&
-		spellType != RE::MagicSystem::SpellType::kScroll)
+		spellType != RE::MagicSystem::SpellType::kScroll &&
+		spellType != RE::MagicSystem::SpellType::kStaffEnchantment)
 		return false;
 
 	// On self
