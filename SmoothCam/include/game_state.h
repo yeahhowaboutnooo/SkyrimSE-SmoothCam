@@ -164,12 +164,52 @@ namespace GameState {
 	float GetCurrentBowDrawTimer(const RE::PlayerCharacter* player) noexcept;
 	// Returns true if the player is holding an enchanted item that counts as 'magic' in the given hand
 	bool IsUsingMagicItem(const RE::Actor* player, bool leftHand = false) noexcept;
+	// Returns true if the player is holding an enchanted item that counts as 'magic' in the given hand
+	// and the found 'magic' has a projectile-effect of type <type>
+	// if retData is not a nullptr and a type matching projectile is found:
+	//         points retData to the projectileData of the found projectile
+	// if retData is not a nullptr, but no type matching projectile is found:
+	//         points retData to a projectileData IF a projectile is found at all
+	//         (not all magic is projectile magic)
+	bool IsUsingMagicItemOfProjectileType(const RE::Actor* player, bool leftHand = false,
+	                                      const RE::BGSProjectileData::Type type = RE::BGSProjectileData::Type::kMissile,
+	                                      RE::BGSProjectileData** retData = nullptr) noexcept;
 	// Returns true if the given spell counts as "combat" magic
 	bool IsCombatMagic(const RE::MagicItem* spell) noexcept;
+	// Returns true if the given spell counts as "combat" magic
+	// and the found 'magic' has a projectile-effect of type <type>
+	// if retData is not a nullptr and a type matching projectile is found:
+	//         points retData to the projectileData of the found projectile
+	// if retData is not a nullptr, but no type matching projectile is found:
+	//         points retData to a projectileData IF a projectile is found at all
+	//         (not all magic is projectile magic)
+	bool IsCombatMagicOfProjectileType(const RE::MagicItem* spell,
+	                                   const RE::BGSProjectileData::Type type = RE::BGSProjectileData::Type::kMissile,
+	                                   RE::BGSProjectileData** retData = nullptr) noexcept;
 	// Returns true if the player has a melee weapon equiped
 	const bool IsMeleeWeaponDrawn(const RE::Actor* player) noexcept;
 	// Returns true if the player has magic drawn
 	const bool IsMagicDrawn(const RE::Actor* player) noexcept;
+	// Returns true if the player has magic drawn
+	// and the found 'magic' has a projectile-effect of type <type>
+	// if retData is not a nullptr and a type matching projectile is found:
+	//         points retData to the projectileData of the found projectile
+	// if retData is not a nullptr, but no type matching projectile is found:
+	//         points retData to a projectileData IF a projectile is found at all
+	//         (not all magic is projectile magic)
+	const bool IsMagicOfProjectileTypeDrawn(const RE::Actor* player,
+	                                        const RE::BGSProjectileData::Type type = RE::BGSProjectileData::Type::kMissile,
+	                                        RE::BGSProjectileData** retData = nullptr) noexcept;
+	// Returns true if the player has magic drawn in the given hand
+	// and the found 'magic' has a projectile-effect of type <type>
+	// if retData is not a nullptr and a type matching projectile is found:
+	//         points retData to the projectileData of the found projectile
+	// if retData is not a nullptr, but no type matching projectile is found:
+	//         points retData to a projectileData IF a projectile is found at all
+	//         (not all magic is projectile magic)
+	const bool IsMagicOfProjectileTypeDrawn(const RE::Actor* player, bool leftHand,
+	                                        const RE::BGSProjectileData::Type type = RE::BGSProjectileData::Type::kMissile,
+	                                        RE::BGSProjectileData** retData = nullptr) noexcept;
 	// Returns true if the player has a ranged weapon drawn
 	const bool IsRangedWeaponDrawn(const RE::Actor* player) noexcept;
 	// Returns true if a crossbow is drawn

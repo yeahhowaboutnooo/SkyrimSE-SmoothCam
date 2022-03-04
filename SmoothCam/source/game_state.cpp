@@ -214,6 +214,21 @@ bool GameState::IsUsingMagicItem(const RE::Actor* player, bool leftHand) noexcep
 	return IsCombatMagic(enchItem);
 }
 
+bool GameState::IsUsingMagicItemOfProjectileType(const RE::Actor* player, bool leftHand,
+	                                                     const RE::BGSProjectileData::Type type,
+	                                                     RE::BGSProjectileData** retData) noexcept {
+	if (!IsUsingMagicItem(player, leftHand))
+		return false;
+
+	const auto wep = GetEquippedWeapon(player, leftHand);
+
+	const auto enchItem = wep->formEnchanting;
+	if (!enchItem)
+		return false;
+
+	return IsCombatMagicOfProjectileType(enchItem, type, retData);
+}
+
 bool GameState::IsCombatMagic(const RE::MagicItem* spell) noexcept {
 	if (!spell) return false;
 
@@ -233,6 +248,36 @@ bool GameState::IsCombatMagic(const RE::MagicItem* spell) noexcept {
 		return false;
 
 	return true;
+}
+
+bool GameState::IsCombatMagicOfProjectileType(const RE::MagicItem* spell, 
+	                                                  const RE::BGSProjectileData::Type type,
+	                                                  RE::BGSProjectileData** retData) noexcept {
+	if (!IsCombatMagic(spell))
+		return false;
+
+	RE::MagicItem* notConstSpell = const_cast<RE::MagicItem*>(spell);
+
+	//GetCostliestEffectItem seems good enough, if not: iterate through the effect items
+	const auto effItem = notConstSpell->GetCostliestEffectItem();
+	if (!effItem)
+		return false;
+
+	const auto baseEff = effItem->baseEffect;
+	if (!baseEff)
+		return false;
+
+	const auto projBase = baseEff->data.projectileBase;
+	if (!projBase)
+		return false;
+
+	SKSE::stl::enumeration<RE::BGSProjectileData::Type, std::uint16_t> stlType = type;
+	const bool isMagicOfWantedType = projBase->data.types.underlying() & stlType.underlying();
+
+	if (/*isMagicOfWantedType &&*/ retData)
+		*retData = &(projBase->data);
+
+	return isMagicOfWantedType;
 }
 
 // Returns true if the player has a melee weapon equiped
@@ -275,6 +320,55 @@ const bool GameState::IsMagicDrawn(const RE::Actor* player) noexcept {
 	// Or a spell
 	return (GameState::IsCombatMagic(player->selectedSpells[RE::Actor::SlotTypes::kLeftHand]) && !GetEquippedWeapon(player, true)) ||
 		(GameState::IsCombatMagic(player->selectedSpells[RE::Actor::SlotTypes::kRightHand]) && !GetEquippedWeapon(player));
+}
+
+// Returns true if the player has magic drawn that is of ProjectileType type
+const bool GameState::IsMagicOfProjectileTypeDrawn(const RE::Actor* player,
+                                                   const RE::BGSProjectileData::Type type,
+                                                   RE::BGSProjectileData** retData) noexcept {
+	if (!GameState::IsWeaponDrawn(player)) return false;
+	
+	// Using an item that counts as magic
+	if (GameState::IsUsingMagicItemOfProjectileType(player, false, type, retData))
+		return true;
+
+	if (GameState::IsUsingMagicItemOfProjectileType(player, true, type, retData))
+		return true;
+
+	// Or a spell
+	auto lhs = !GameState::GetEquippedWeapon(player, true)  ? player->selectedSpells[RE::Actor::SlotTypes::kLeftHand]  : nullptr;
+	auto rhs = !GameState::GetEquippedWeapon(player, false) ? player->selectedSpells[RE::Actor::SlotTypes::kRightHand] : nullptr;
+
+	if (lhs && GameState::IsCombatMagicOfProjectileType(lhs, type, retData))
+		return true;
+
+	if (rhs && GameState::IsCombatMagicOfProjectileType(rhs, type, retData))
+		return true;
+
+	return false;
+}
+
+// Returns true if the player has magic drawn in the given hand that is of ProjectileType type
+const bool GameState::IsMagicOfProjectileTypeDrawn(const RE::Actor* player, bool leftHand,
+                                                   const RE::BGSProjectileData::Type type,
+                                                   RE::BGSProjectileData** retData) noexcept {
+	if (!GameState::IsWeaponDrawn(player)) return false;
+	
+	// Using an item that counts as magic
+	if (GameState::IsUsingMagicItemOfProjectileType(player, leftHand, type, retData))
+		return true;
+
+	// Or a spell
+	auto lhs = !GameState::GetEquippedWeapon(player, true)  ? player->selectedSpells[RE::Actor::SlotTypes::kLeftHand]  : nullptr;
+	auto rhs = !GameState::GetEquippedWeapon(player, false) ? player->selectedSpells[RE::Actor::SlotTypes::kRightHand] : nullptr;
+
+	if (leftHand && lhs && GameState::IsCombatMagicOfProjectileType(lhs, type, retData))
+		return true;
+
+	if (!leftHand && rhs && GameState::IsCombatMagicOfProjectileType(rhs, type, retData))
+		return true;
+
+	return false;
 }
 
 // Returns true if the player has a ranged weapon drawn

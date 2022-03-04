@@ -1,11 +1,13 @@
 ﻿#include "crosshair.h"
 #include "crosshair/skyrim.h"
 #include "crosshair/dot.h"
+#include "thirdperson.h"
 #ifdef DEBUG
 #include "arrow_fixes.h"
 #endif
 
 extern Offsets* g_Offsets;
+extern eastl::unique_ptr<Camera::Camera> g_theCamera;
 
 static Crosshair::Manager::CurrentCrosshairData g_crosshairData;
 
@@ -325,31 +327,96 @@ void Crosshair::Manager::UpdateCrosshairPosition(const RE::Actor* player, const 
 			}
 		}
 	} else if (GameState::IsMagicDrawn(player)) {
-		RE::NiPoint3 niOrigin = { 0.01f, 0.01f, 0.01f };
 		glm::vec3 normal = { 0.0f, 1.00f, 0.0f };
-
-		const auto handNode = skyrim_cast<RE::NiNode*>(player->loadedData->data3D->GetObjectByName(Strings.magic));
-		if (handNode)
-			niOrigin = { handNode->world.translate.x, handNode->world.translate.y, handNode->world.translate.z };
-
 		normal = mmath::GetViewVector(
 			glm::vec3(0.0f, 1.0f, 0.0f),
 			aimRotation.x,
 			cameraRotation.y
 		);
 
-		const auto pos = TranslateFirePostion(player, cameraRotation, {
-			niOrigin.x, niOrigin.y, niOrigin.z
-		});
+		using enum_proj_t = SKSE::stl::enumeration<RE::BGSProjectileData::Type, std::uint16_t>;
+		using projectile_type = RE::BGSProjectileData::Type;
+		const projectile_type wantedProjType = static_cast<projectile_type>(
+			enum_proj_t(projectile_type::kMissile).underlying()
+			| enum_proj_t(projectile_type::kBeam).underlying()
+			);
+		RE::BGSProjectileData* projData;
+		bool hasMSLequipped = GameState::IsMagicOfProjectileTypeDrawn(player, wantedProjType, &projData);
 
-		// Cast the aim ray
-		const auto origin = glm::vec4(pos, 0.0f);
-		const auto ray = glm::vec4(normal.x, normal.y, normal.z, 0.0f) * maxRayLength;
-		const auto result = Raycast::hkpCastRay(origin, origin + ray);
-		hit = result.hit;
-		hitPos = result.hitPos;
-		rayLength = result.rayLength;
-		hitCharacter = result.hitCharacter != nullptr;
+		if (hasMSLequipped)
+		{
+			float mslSpeed = projData->speed;
+
+			RE::NiPoint3 mslNiOrigin = { 0.01f, 0.01f, 0.01f };
+			const auto handNode = skyrim_cast<RE::NiNode*>(player->loadedData->data3D->GetObjectByName(Strings.magic));
+			if (handNode)
+				mslNiOrigin = { handNode->world.translate.x, handNode->world.translate.y, handNode->world.translate.z };
+			//for standing still this is okay-ish
+			//but for running two crosshairs would be better (or just the crosshair that currently is firing?)
+			const auto leftHandNode  = skyrim_cast<RE::NiNode*>(player->loadedData->data3D->GetObjectByName(Strings.lmag));
+			const auto rightHandNode = skyrim_cast<RE::NiNode*>(player->loadedData->data3D->GetObjectByName(Strings.rmag));
+			if (leftHandNode && rightHandNode)
+			{
+				mslNiOrigin =  { leftHandNode->world.translate.x, leftHandNode->world.translate.y, leftHandNode->world.translate.z };
+				mslNiOrigin += { rightHandNode->world.translate.x, rightHandNode->world.translate.y, rightHandNode->world.translate.z };
+				mslNiOrigin *= 0.5f;
+			}
+
+			auto charController = player->GetCharController();
+			RE::hkVector4 vel;
+			charController->GetLinearVelocityImpl(vel);
+			glm::vec3 playerXYvelocity = glm::vec3(vel.quad.m128_f32[0], vel.quad.m128_f32[1], .0f);
+			const auto metric2skyrim = 1.0f / 0.01428767293691635f; //deci-meters to game Units,
+			                                                        //but not sure if this is in fact the magic number we want here
+
+			const auto camPos = g_theCamera->GetThirdpersonCamera()->GetPosition().world;
+			const auto translatedCamPos = TranslateFirePostion(player, cameraRotation, camPos);
+			//first aim ray: going from camPos to total velocity vector of missile with a max length of camRayLength
+			const auto camRayLength = 2000.0f; //idk maybe defined in skyrimprefs.ini?
+			const auto camOrigin = glm::vec4(translatedCamPos, .0f);
+			const auto camRayTVV = normal * mslSpeed + playerXYvelocity * metric2skyrim;
+			const auto camRayTVVnorm = glm::normalize(camRayTVV);
+			const auto camRay = glm::vec4(camRayTVVnorm, .0f) * camRayLength;
+			auto camRayResult = Raycast::hkpCastRay(camOrigin, camOrigin + camRay);
+			if (!camRayResult.hit)
+			{
+				camRayResult.hitPos = camOrigin + camRay;
+				camRayResult.rayLength = camRayLength;
+			}
+			//2nd aim ray: going from handNode to camRayResult.hitPos
+			const auto mslPos = TranslateFirePostion(player, cameraRotation, {
+				mslNiOrigin.x, mslNiOrigin.y, mslNiOrigin.z
+			});
+			const auto mslOrigin = glm::vec4(mslPos, 0.0f);
+			const auto mslRayNorm = glm::normalize(glm::vec3(camRayResult.hitPos) - mslPos);
+			const auto mslRay = glm::vec4(mslRayNorm, .0f) * maxRayLength;
+			const auto mslResult = Raycast::hkpCastRay(mslOrigin, mslOrigin + mslRay);
+			hit = mslResult.hit;
+			hitPos = mslResult.hitPos;
+			rayLength = mslResult.rayLength;
+			hitCharacter = mslResult.hitCharacter != nullptr;
+		}
+		else // projType != kMissile
+		{
+			RE::NiPoint3 niOrigin = { 0.01f, 0.01f, 0.01f };
+
+			const auto handNode = skyrim_cast<RE::NiNode*>(player->loadedData->data3D->GetObjectByName(Strings.magic));
+			if (handNode)
+				niOrigin = { handNode->world.translate.x, handNode->world.translate.y, handNode->world.translate.z };
+
+			const auto pos = TranslateFirePostion(player, cameraRotation, {
+				niOrigin.x, niOrigin.y, niOrigin.z
+				});
+
+			// Cast the aim ray
+			const auto origin = glm::vec4(pos, 0.0f);
+			const auto ray = glm::vec4(normal.x, normal.y, normal.z, 0.0f) * maxRayLength;
+			const auto result = Raycast::hkpCastRay(origin, origin + ray);
+			hit = result.hit;
+			hitPos = result.hitPos;
+			rayLength = result.rayLength;
+			hitCharacter = result.hitCharacter != nullptr;
+		}
 	}
 
 	// Now set the crosshair
